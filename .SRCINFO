@@ -1,0 +1,18 @@
+pkgbase = claude-desktop
+	pkgdesc = Claude Desktop for Linux
+	pkgver = 1.0.0  # Note: Version is dynamically determined during build
+	pkgrel = 1
+	url = https://www.anthropic.com/claude
+	arch = x86_64
+	license = custom
+	makedepends = wget
+	makedepends = icoutils
+	makedepends = imagemagick
+	makedepends = npm
+	depends = nodejs
+	depends = npm
+	depends = p7zip
+	provides = claude-desktop
+	conflicts = claude-desktop
+
+pkgname = claude-desktop

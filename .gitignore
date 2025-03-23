@@ -1,13 +1,19 @@
-# Build output
+# Build artifacts
+pkg/
+src/
+*.pkg.tar.zst
+*.pkg.tar.xz
 build/
-build-*/
 
-# Reference implementation
-reference/
+# Temporary files
+*.exe
+*.log
+*.tmp
+*~
 
-# Node modules
-node_modules/
+# Downloaded files
+Claude-Setup-x64.exe
 
-# OS-specific files
-.DS_Store
-Thumbs.db
+# Extracted files
+*.ico
+*.png
