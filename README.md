@@ -74,6 +74,7 @@ When the login does not work you can try to run the following command to update 
 sudo update-desktop-database /usr/share/applications
 
 ```
+When experiencing errors, have all claude pids killed by: `ps awx | grep claude | grep -v grep | awk '{print $1}' | xargs kill -9`
 
 ## Updating
 
