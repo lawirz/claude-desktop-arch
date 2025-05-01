@@ -1,6 +1,6 @@
 # Maintainer: Claude Desktop Linux Maintainers
 
-pkgname=claude-desktop
+pkgname=claude-desktop-arch
 pkgver=1.0.0 # Will be updated during build
 pkgrel=1
 pkgdesc="Claude Desktop for Linux"
@@ -213,15 +213,6 @@ Categories=Office;Utility;
 MimeType=x-scheme-handler/claude;
 StartupWMClass=Claude
 EOF
-
-    # Install electron globally during package installation
-    mkdir -p "${pkgdir}/usr/lib/${pkgname}/setup"
-    cat >"${pkgdir}/usr/lib/${pkgname}/setup/install-electron.sh" <<EOF
-#!/bin/bash
-npm install -g electron
-EOF
-    chmod +x "${pkgdir}/usr/lib/${pkgname}/setup/install-electron.sh"
-
     # Create launcher script
     cat >"${pkgdir}/usr/bin/claude-desktop" <<EOF
 #!/bin/bash
