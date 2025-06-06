@@ -1,6 +1,6 @@
 # Maintainer: Claude Desktop Linux Maintainers
 
-pkgname=claude-desktop-arch
+pkgname=claude-desktop
 pkgver=1.0.0 # Will be updated during build
 pkgrel=1
 pkgdesc="Claude Desktop for Linux"
