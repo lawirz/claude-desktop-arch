@@ -1,7 +1,7 @@
 # Maintainer: Claude Desktop Linux Maintainers
 
 pkgname=claude-desktop
-pkgver=1.0.0 # Will be updated during build
+pkgver=1.0.0 # Will be replaced with actual claude desktop version during build
 pkgrel=1
 pkgdesc="Claude Desktop for Linux"
 arch=('x86_64')
@@ -15,6 +15,33 @@ conflicts=("${pkgname}")
 # Update this URL when a new version of Claude Desktop is released
 _download_url="https://storage.googleapis.com/osprey-downloads-c02f6a0d-347c-492b-a752-3e0651722e97/nest-win-x64/Claude-Setup-x64.exe"
 
+pkgver() {
+    cd "${srcdir}"
+    
+    # Download Claude Windows installer if not already present
+    if [ ! -f "Claude-Setup-x64.exe" ]; then
+        wget -q -O "Claude-Setup-x64.exe" "${_download_url}"
+    fi
+    
+    # Extract to find nupkg file
+    if [ ! -f "AnthropicClaude-*.nupkg" ]; then
+        7z x -y "Claude-Setup-x64.exe" >/dev/null 2>&1
+    fi
+    
+    # Extract version from the nupkg filename
+    _nupkg_path=$(find . -name "AnthropicClaude-*.nupkg" | head -1)
+    if [ -z "${_nupkg_path}" ]; then
+        return 1
+    fi
+    
+    _version=$(echo "${_nupkg_path}" | grep -oP 'AnthropicClaude-\K[0-9]+\.[0-9]+\.[0-9]+(?=-full)')
+    if [ -z "${_version}" ]; then
+        return 1
+    fi
+    
+    echo "${_version}"
+}
+
 prepare() {
     cd "${srcdir}"
 
@@ -27,20 +54,12 @@ prepare() {
     echo "📦 Extracting resources..."
     7z x -y "Claude-Setup-x64.exe"
 
-    # Extract nupkg filename and version
+    # Find nupkg file for processing
     _nupkg_path=$(find . -name "AnthropicClaude-*.nupkg" | head -1)
     if [ -z "${_nupkg_path}" ]; then
         echo "❌ Could not find AnthropicClaude nupkg file"
         exit 1
     fi
-
-    # Extract version from the nupkg filename
-    pkgver=$(echo "${_nupkg_path}" | grep -oP 'AnthropicClaude-\K[0-9]+\.[0-9]+\.[0-9]+(?=-full)')
-    if [ -z "${pkgver}" ]; then
-        echo "❌ Could not extract version from nupkg filename"
-        exit 1
-    fi
-    echo "✓ Detected Claude version: ${pkgver}"
 
     # Extract nupkg
     7z x -y "${_nupkg_path}"
