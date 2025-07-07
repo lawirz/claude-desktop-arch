@@ -80,6 +80,135 @@ When experiencing errors, have all claude pids killed by: `ps awx | grep claude 
 
 When a new version of Claude Desktop is released, update the `_download_url` variable in the PKGBUILD file and rebuild the package.
 
+## Development and Testing
+
+This section describes how to set up a development environment and test the package build before distribution.
+
+### Using the Chroot Testing Environment
+
+The `setup-chroot.sh` script provides an isolated testing environment that prevents potential issues with your main system. This is the recommended approach for testing package builds.
+
+**Important Notes**:
+- The script automatically checks for and installs required dependencies (like `arch-install-scripts`) when you run it
+- Do not run the script as root - it will refuse to run and display an error
+- The chroot is created in a `chroot-test` directory relative to the script location
+- The `test` command runs with `--noconfirm` flag for automated builds
+
+#### Available Commands
+
+The script provides several commands to manage the chroot environment:
+
+- `setup` - Create the chroot environment (includes disabling pacman CheckSpace)
+- `copy` - Copy PKGBUILD to the chroot
+- `enter` - Enter the chroot environment for manual testing
+- `test` - Run automated package build test
+- `cleanup` - Remove the chroot environment
+- `all` - Run complete setup and test workflow
+
+**Note**: The `setup` command automatically disables pacman CheckSpace to prevent mount point errors when installing packages in the chroot.
+
+#### Quick Start
+
+For a complete automated test:
+
+```bash
+./setup-chroot.sh all
+```
+
+This will:
+1. Check and install dependencies
+2. Create a clean chroot environment with CheckSpace disabled
+3. Copy the PKGBUILD and create builder user
+4. Build and test the package automatically
+5. Display built package files on success
+
+#### Step-by-Step Manual Testing
+
+If you prefer more control over the testing process:
+
+```bash
+# 1. Create the chroot environment
+./setup-chroot.sh setup
+
+# 2. Copy PKGBUILD to chroot
+./setup-chroot.sh copy
+
+# 3. Enter the chroot for manual testing
+./setup-chroot.sh enter
+
+# Inside the chroot:
+su - builder
+cd /home/builder
+makepkg -s
+
+# Exit the chroot
+exit
+
+# 4. Clean up when done
+./setup-chroot.sh cleanup
+```
+
+#### Understanding the Chroot Environment
+
+The chroot environment provides:
+- A minimal Arch Linux installation
+- Isolated filesystem to prevent system contamination
+- A dedicated `builder` user for safe package building (with passwordless sudo)
+- Automatic dependency resolution via `makepkg -s`
+- Disabled pacman CheckSpace for smooth package operations
+
+### Manual Testing Without Chroot
+
+If you prefer to test directly on your system (not recommended for untested PKGBUILDs):
+
+```bash
+# Build the package without installing
+makepkg
+
+# Or build and install in one step
+makepkg -C -f -si
+```
+
+### Development Workflow
+
+When modifying the PKGBUILD:
+
+1. **Make your changes** to the PKGBUILD file
+2. **Test in chroot** using `./setup-chroot.sh all`
+3. **Verify the package** builds successfully
+4. **Check the built package** in `chroot-test/home/builder/`
+5. **Test installation** (optional) within the chroot
+6. **Clean up** with `./setup-chroot.sh cleanup`
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **"makepkg should not be run as root"**
+   - Never run the setup script or makepkg with sudo
+   - The script will request sudo only when needed
+
+2. **"Chroot directory already exists"**
+   - Run `./setup-chroot.sh cleanup` first
+   - Or answer 'y' when prompted to remove it
+
+3. **Mount point errors in chroot**
+   - CheckSpace is automatically disabled during `setup`
+   - This should not occur with the current version
+
+4. **Build failures**
+   - Check the PKGBUILD for syntax errors
+   - Ensure all dependencies are listed correctly
+   - Review the build output for specific errors
+
+### Tips for Developers
+
+- Always test in a chroot environment before pushing changes
+- The chroot environment mimics a clean Arch installation
+- Built packages appear in `chroot-test/home/builder/`
+- You can copy built packages out of the chroot for distribution
+- Use `makepkg -g` to generate new checksums when updating sources
+
 ## How It Works
 
 This package:

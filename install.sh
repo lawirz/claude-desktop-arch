@@ -10,26 +10,7 @@ if [ ! -f "/etc/arch-release" ] && ! command -v pacman &>/dev/null; then
     exit 1
 fi
 
-# Install dependencies with sudo
-echo "Installing dependencies (may require sudo password)..."
-sudo pacman -S --needed --noconfirm base-devel git wget nodejs npm p7zip icoutils imagemagick
-
-# Install electron globally via npm
-echo "Installing electron via npm..."
-npm install -g electron
-
-# Create build directory
-BUILD_DIR="$(pwd)/build"
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
-
-# Copy PKGBUILD to build directory
-cp PKGBUILD "$BUILD_DIR/"
-
-# Build package as regular user (not root)
 echo "Building package..."
-cd "$BUILD_DIR"
-
 # Build the package
 makepkg -s
 

@@ -4,7 +4,8 @@ src/
 *.pkg.tar.zst
 *.pkg.tar.xz
 build/
-
+chroot-*/
+node_modules/
 # Temporary files
 *.exe
 *.log
@@ -17,3 +18,5 @@ Claude-Setup-x64.exe
 # Extracted files
 *.ico
 *.png
+package-lock.json
+package.json

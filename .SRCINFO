@@ -9,9 +9,9 @@ pkgbase = claude-desktop
 	makedepends = icoutils
 	makedepends = imagemagick
 	makedepends = npm
+	makedepends = p7zip
 	depends = nodejs
 	depends = npm
-	depends = p7zip
 	provides = claude-desktop
 	conflicts = claude-desktop
 

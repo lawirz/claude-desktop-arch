@@ -7,8 +7,8 @@ pkgdesc="Claude Desktop for Linux"
 arch=('x86_64')
 url="https://www.anthropic.com/claude"
 license=('custom')
-depends=('nodejs' 'npm' 'p7zip')
-makedepends=('wget' 'icoutils' 'imagemagick' 'npm')
+depends=('nodejs' 'npm')
+makedepends=('wget' 'icoutils' 'imagemagick' '7zip')
 provides=("${pkgname}")
 conflicts=("${pkgname}")
 
@@ -78,10 +78,8 @@ prepare() {
 
     cd "${srcdir}/electron-app"
 
-    # Install electron and @electron/asar
-    npm install --no-save electron @electron/asar
-
-    npx @electron/asar extract app.asar app.asar.contents
+    # Use npx to run @electron/asar (downloads temporarily if needed)
+    npx --yes @electron/asar extract app.asar app.asar.contents
 
     # Replace native module with stub implementation
     echo "Creating stub native module..."
@@ -233,14 +231,105 @@ MimeType=x-scheme-handler/claude;
 StartupWMClass=Claude
 EOF
     # Create launcher script
-    cat >"${pkgdir}/usr/bin/claude-desktop" <<EOF
+    cat >"${pkgdir}/usr/bin/claude-desktop" <<'EOF'
 #!/bin/bash
-# Check if electron is installed, if not install it
-if ! command -v electron &> /dev/null; then
-    echo "Electron not found. Installing..."
-    npm install -g electron
+# Claude Desktop Launcher with on-demand electron installation
+
+ELECTRON_ALIAS="electron-claude-desktop"
+
+ensure_electron() {
+    # Check if our aliased electron is already available
+    if command -v "$ELECTRON_ALIAS" &> /dev/null; then
+        return 0
+    fi
+    
+    # Check if regular electron is available and use it
+    if command -v electron &> /dev/null; then
+        echo "Using existing electron installation..."
+        ELECTRON_ALIAS="electron"
+        return 0
+    fi
+    
+    echo "Setting up electron for Claude Desktop (one-time setup)..."
+    
+    # Check npm availability
+    if ! command -v npm &> /dev/null; then
+        echo "Error: npm not found. Please install Node.js and npm." >&2
+        exit 1
+    fi
+    
+    # Install with lock file to prevent concurrent installs
+    local lock_file="/tmp/claude-desktop-electron-install.lock"
+    
+    # Clean up function for proper lock file removal
+    cleanup_lock() {
+        rm -f "$lock_file"
+    }
+    
+    # Check for stale lock files (older than 10 minutes)
+    if [ -f "$lock_file" ]; then
+        local lock_age=$(($(date +%s) - $(stat -c %Y "$lock_file" 2>/dev/null || echo 0)))
+        if [ $lock_age -gt 600 ]; then
+            echo "Removing stale lock file (${lock_age}s old)..."
+            rm -f "$lock_file"
+        else
+            echo "Another electron installation in progress. Please wait..."
+            local wait_count=0
+            while [ -f "$lock_file" ] && [ $wait_count -lt 300 ]; do 
+                sleep 1
+                wait_count=$((wait_count + 1))
+            done
+            if [ -f "$lock_file" ]; then
+                echo "Installation timeout. Removing stale lock..."
+                rm -f "$lock_file"
+            else
+                return 0
+            fi
+        fi
+    fi
+    
+    touch "$lock_file"
+    trap cleanup_lock EXIT INT TERM
+    
+    # Try to install with alias first, fallback to regular electron
+    if ! npm install -g "$ELECTRON_ALIAS@npm:electron" --no-fund --no-audit 2>/dev/null; then
+        echo "Alias installation failed, installing regular electron..."
+        npm install -g electron --no-fund --no-audit || {
+            echo "Error: Failed to install electron. Please check your npm configuration." >&2
+            exit 1
+        }
+        ELECTRON_ALIAS="electron"
+    fi
+    
+    echo "Electron setup complete."
+}
+
+ensure_electron
+
+# Find the electron binary path
+ELECTRON_PATH=""
+if command -v "$ELECTRON_ALIAS" &> /dev/null; then
+    # Get the actual executable path
+    ELECTRON_PATH=$(command -v "$ELECTRON_ALIAS")
+else
+    # Try common npm global locations
+    NPM_PREFIX=$(npm config get prefix 2>/dev/null || echo "/usr")
+    if [ "$ELECTRON_ALIAS" = "electron" ]; then
+        ELECTRON_PATH="$NPM_PREFIX/lib/node_modules/electron/dist/electron"
+    else
+        ELECTRON_PATH="$NPM_PREFIX/lib/node_modules/$ELECTRON_ALIAS/dist/electron"
+    fi
 fi
-electron /usr/lib/claude-desktop/app.asar "\$@"
+
+if [ ! -x "$ELECTRON_PATH" ]; then
+    echo "Error: Electron binary not found at $ELECTRON_PATH" >&2
+    exit 1
+fi
+
+# Clean up lock file before launching
+rm -f /tmp/claude-desktop-electron-install.lock
+
+exec "$ELECTRON_PATH" /usr/lib/claude-desktop/app.asar "$@"
 EOF
     chmod +x "${pkgdir}/usr/bin/claude-desktop"
 }
